@@ -36,7 +36,7 @@ const {
   setTyping,
 } = useChat();
 const { logout } = useAuth();
-const { confirm, setLoading } = useGlobalConfirm();
+const { state: confirmState, confirm, setLoading } = useGlobalConfirm();
 const detailsOpen = ref(false);
 const conversationsOpen = ref(false);
 const listLoading = computed(() => conversationsLoading.value && chatItems.value.length === 0);
@@ -194,6 +194,7 @@ onBeforeUnmount(() => {
       v-model:open="detailsOpen"
       direction="right"
       :handle="false"
+      :dismissible="!confirmState.open"
       :ui="{ content: 'w-[min(24rem,100vw)] bg-[var(--card)] border-l border-[var(--border)]' }"
     >
       <template #content>
@@ -226,4 +227,3 @@ onBeforeUnmount(() => {
 
   </main>
 </template>
-

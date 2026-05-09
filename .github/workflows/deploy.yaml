@@ -28,6 +28,8 @@ jobs:
           VPS_USER: ${{ secrets.VPS_USER }}
         run: |
           ssh $VPS_USER@$VPS_HOST <<'ENDSSH'
+            set -euo pipefail
+
             export PROJECT_NAME="demo-chat-app"
             export APP_DIR="/apps/demo-chat-app"
             export REPO_URL="https://github.com/enfyra/demo-chat-app.git"
@@ -50,6 +52,8 @@ jobs:
             echo "NPM: $NPM_PATH"
             echo "Yarn: $YARN_PATH"
             echo "PM2: $PM2_PATH"
+
+            $GIT_PATH config --global --add safe.directory "$APP_DIR" || true
 
             if [ ! -d "$APP_DIR/.git" ]; then
               echo "Cloning repository into $APP_DIR..."
