@@ -1,0 +1,206 @@
+<script setup lang="ts">
+import { MessageCircle, Search, UserPlus, UsersRound, X } from 'lucide-vue-next';
+import type { ChatUser } from '~/types/chat';
+
+const props = defineProps<{
+  currentUserId?: string;
+  busy?: boolean;
+}>();
+
+const emit = defineEmits<{
+  startDm: [user: ChatUser];
+  createGroup: [payload: { members: ChatUser[] }];
+}>();
+
+const dmOpen = ref(false);
+const groupOpen = ref(false);
+const query = ref('');
+const results = ref<ChatUser[]>([]);
+const selected = ref<ChatUser[]>([]);
+const loading = ref(false);
+let searchTimer: ReturnType<typeof setTimeout> | null = null;
+let searchRun = 0;
+
+const mapUser = (value: any): ChatUser => ({
+  id: value?.id || '',
+  email: value?.email || '',
+  displayName: value?.displayName || value?.display_name || value?.email || 'Unknown user',
+  avatarUrl: value?.avatarUrl || value?.avatar_url || null,
+  statusText: value?.statusText || value?.status_text || null,
+  lastSeenAt: value?.lastSeenAt || value?.last_seen_at || null,
+});
+
+const canCreateGroup = computed(() => selected.value.length >= 2 && !props.busy);
+
+const resetSearch = () => {
+  query.value = '';
+  results.value = [];
+};
+
+const openDm = () => {
+  groupOpen.value = false;
+  dmOpen.value = true;
+  resetSearch();
+  void searchUsers();
+};
+
+const openGroup = () => {
+  dmOpen.value = false;
+  groupOpen.value = true;
+  resetSearch();
+  void searchUsers();
+};
+
+const closeModal = () => {
+  dmOpen.value = false;
+  groupOpen.value = false;
+};
+
+const searchUsers = async () => {
+  const normalized = query.value.trim();
+  const runId = ++searchRun;
+  loading.value = true;
+  try {
+    const filter = normalized
+      ? {
+          _or: [
+            { email: { _contains: normalized } },
+            { displayName: { _contains: normalized } },
+          ],
+        }
+      : {};
+    const response: any = await $fetch('/enfyra/user_definition', {
+      query: {
+        ...(normalized ? { filter: JSON.stringify(filter) } : {}),
+        limit: groupOpen.value ? 8 : 6,
+      },
+    });
+    if (runId !== searchRun) return;
+    const selectedIds = new Set(selected.value.map((user) => user.id));
+    results.value = (Array.isArray(response?.data) ? response.data : [])
+      .map(mapUser)
+      .filter((user: ChatUser) => user.id && user.id !== props.currentUserId && (!groupOpen.value || !selectedIds.has(user.id)));
+  } catch {
+    if (runId !== searchRun) return;
+    results.value = [];
+  } finally {
+    if (runId === searchRun) loading.value = false;
+  }
+};
+
+const startDm = (user: ChatUser) => {
+  emit('startDm', user);
+  closeModal();
+};
+
+const addUser = (user: ChatUser) => {
+  if (selected.value.some((item) => item.id === user.id)) return;
+  selected.value = [...selected.value, user].slice(0, 49);
+  results.value = results.value.filter((item) => item.id !== user.id);
+};
+
+const removeUser = (userId: string) => {
+  selected.value = selected.value.filter((user) => user.id !== userId);
+  void searchUsers();
+};
+
+const createGroup = () => {
+  if (!canCreateGroup.value) return;
+  emit('createGroup', { members: selected.value });
+  selected.value = [];
+  closeModal();
+};
+
+watch(query, () => {
+  if (!dmOpen.value && !groupOpen.value) return;
+  if (searchTimer) clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    void searchUsers();
+  }, 280);
+});
+
+onBeforeUnmount(() => {
+  if (searchTimer) clearTimeout(searchTimer);
+});
+</script>
+
+<template>
+  <div class="new-conversation">
+    <div class="new-heading">
+      <span>New conversation</span>
+      <div class="quick-actions">
+        <UButton color="neutral" variant="soft" size="xs" :disabled="busy" @click="openDm">
+          <MessageCircle :size="14" />
+          DM
+        </UButton>
+        <UButton color="neutral" variant="soft" size="xs" :disabled="busy" @click="openGroup">
+          <UsersRound :size="14" />
+          Group
+        </UButton>
+      </div>
+    </div>
+
+    <Teleport to="body">
+      <div v-if="dmOpen || groupOpen" class="modal-backdrop" @click.self="closeModal">
+        <UCard class="conversation-dialog" role="dialog" aria-modal="true" :aria-label="groupOpen ? 'Create group chat' : 'Start direct message'">
+          <header class="dialog-header">
+            <div>
+              <UBadge color="neutral" variant="soft">{{ groupOpen ? 'Create group' : 'Start DM' }}</UBadge>
+              <h2>{{ groupOpen ? 'New group conversation' : 'New direct message' }}</h2>
+              <span>{{ groupOpen ? 'Select people first. You can rename the group later.' : 'Search a user and start chatting.' }}</span>
+            </div>
+            <UButton color="neutral" variant="outline" square aria-label="Close" @click="closeModal">
+              <X :size="18" />
+            </UButton>
+          </header>
+
+          <div v-if="groupOpen && selected.length" class="selected-block">
+            <div class="selected-header">
+              <span>{{ selected.length + 1 }} members</span>
+              <small>including you</small>
+            </div>
+            <div class="selected-list">
+              <UButton v-for="user in selected" :key="user.id" class="selected-chip" color="neutral" variant="soft" @click="removeUser(user.id)">
+                <span>{{ user.displayName }}</span>
+                <X :size="14" />
+              </UButton>
+            </div>
+          </div>
+
+          <UInput v-model="query" placeholder="Search people" autofocus size="lg" class="search-field">
+            <template #leading>
+              <Search :size="17" />
+            </template>
+          </UInput>
+
+          <div class="result-list">
+            <p v-if="loading" class="empty-state">Loading users...</p>
+            <div v-for="user in results" :key="user.id" class="result-row">
+              <span class="result-avatar">{{ user.displayName.slice(0, 1) }}</span>
+              <span class="result-copy">
+                <strong>{{ user.displayName }}</strong>
+                <span>{{ user.email }}</span>
+              </span>
+              <UButton v-if="groupOpen" color="neutral" variant="soft" @click="addUser(user)">
+                <UserPlus :size="15" />
+                Add
+              </UButton>
+              <UButton v-else color="primary" variant="soft" :disabled="busy" @click="startDm(user)">
+                Message
+              </UButton>
+            </div>
+            <p v-if="!loading && results.length === 0" class="empty-state">No users found.</p>
+          </div>
+
+          <footer v-if="groupOpen" class="dialog-footer">
+            <UButton color="neutral" variant="ghost" @click="closeModal">Cancel</UButton>
+            <UButton :disabled="!canCreateGroup" :loading="busy" @click="createGroup">
+              {{ busy ? 'Creating' : 'Create group' }}
+            </UButton>
+          </footer>
+        </UCard>
+      </div>
+    </Teleport>
+  </div>
+</template>
+
