@@ -31,6 +31,12 @@ const mapUser = (value: any): ChatUser => ({
 });
 
 const canCreateGroup = computed(() => selected.value.length >= 2 && !props.busy);
+const modalOpen = computed({
+  get: () => dmOpen.value || groupOpen.value,
+  set: (value) => {
+    if (!value) closeModal();
+  },
+});
 
 const resetSearch = () => {
   query.value = '';
@@ -140,8 +146,14 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <Teleport to="body">
-      <div v-if="dmOpen || groupOpen" class="modal-backdrop" @click.self="closeModal">
+    <UModal
+      v-model:open="modalOpen"
+      :ui="{
+        overlay: 'conversation-modal-overlay',
+        content: 'conversation-modal-content',
+      }"
+    >
+      <template #content>
         <UCard class="conversation-dialog" role="dialog" aria-modal="true" :aria-label="groupOpen ? 'Create group chat' : 'Start direct message'">
           <header class="dialog-header">
             <div>
@@ -199,8 +211,7 @@ onBeforeUnmount(() => {
             </UButton>
           </footer>
         </UCard>
-      </div>
-    </Teleport>
+      </template>
+    </UModal>
   </div>
 </template>
-

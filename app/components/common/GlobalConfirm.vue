@@ -3,80 +3,86 @@ import { AlertTriangle, X } from 'lucide-vue-next';
 
 const { state, close } = useGlobalConfirm();
 
-const closeFromBackdrop = (event: MouseEvent) => {
-  if (event.target === event.currentTarget) close(false);
-};
+const isOpen = computed({
+  get: () => state.value.open,
+  set: (value) => {
+    if (!value) close(false);
+  },
+});
 </script>
 
 <template>
-  <Teleport to="body">
-    <Transition name="confirm-fade">
-      <div
-        v-if="state.open"
-        class="confirm-backdrop"
-        @pointerdown.stop
-        @mousedown.stop
-        @mouseup.stop
-        @click.stop="closeFromBackdrop"
-      >
-        <section class="confirm-dialog panel" role="alertdialog" aria-modal="true" :aria-label="state.title" @click.stop>
-          <header class="confirm-header">
-            <span class="confirm-icon" :class="{ destructive: state.destructive }">
-              <AlertTriangle :size="18" />
-            </span>
-            <UButton color="neutral" variant="ghost" square aria-label="Close" :disabled="state.loading" @click="close(false)">
-              <X :size="17" />
-            </UButton>
-          </header>
+  <UModal
+    v-model:open="isOpen"
+    :dismissible="!state.loading"
+    :close="false"
+    :ui="{
+      overlay: 'confirm-modal-overlay',
+      content: 'confirm-modal-content',
+    }"
+  >
+    <template #content>
+      <section class="confirm-dialog panel" role="alertdialog" aria-modal="true" :aria-label="state.title">
+        <header class="confirm-header">
+          <span class="confirm-icon" :class="{ destructive: state.destructive }">
+            <AlertTriangle :size="18" />
+          </span>
+          <UButton color="neutral" variant="ghost" square aria-label="Close" :disabled="state.loading" @click="close(false)">
+            <X :size="17" />
+          </UButton>
+        </header>
 
-          <div class="confirm-copy">
-            <h2>{{ state.title }}</h2>
-            <p>{{ state.message }}</p>
-            <small v-if="state.details">{{ state.details }}</small>
-          </div>
+        <div class="confirm-copy">
+          <h2>{{ state.title }}</h2>
+          <p>{{ state.message }}</p>
+          <small v-if="state.details">{{ state.details }}</small>
+        </div>
 
-          <label v-if="state.optionLabel" class="confirm-option">
-            <input v-model="state.optionChecked" type="checkbox" :disabled="state.loading">
-            <span>
-              <strong>{{ state.optionLabel }}</strong>
-              <small v-if="state.optionDescription">{{ state.optionDescription }}</small>
-            </span>
-          </label>
+        <label v-if="state.optionLabel" class="confirm-option">
+          <input v-model="state.optionChecked" type="checkbox" :disabled="state.loading">
+          <span>
+            <strong>{{ state.optionLabel }}</strong>
+            <small v-if="state.optionDescription">{{ state.optionDescription }}</small>
+          </span>
+        </label>
 
-          <footer class="confirm-actions">
-            <button class="confirm-button secondary" type="button" :disabled="state.loading" @click="close(false)">
-              {{ state.cancelText }}
-            </button>
-            <button
-              class="confirm-button primary"
-              :class="{ destructive: state.destructive }"
-              type="button"
-              :disabled="state.loading"
-              @click="close(true)"
-            >
-              {{ state.loading ? 'Working...' : state.confirmText }}
-            </button>
-          </footer>
-        </section>
-      </div>
-    </Transition>
-  </Teleport>
+        <footer class="confirm-actions">
+          <button class="confirm-button secondary" type="button" :disabled="state.loading" @click="close(false)">
+            {{ state.cancelText }}
+          </button>
+          <button
+            class="confirm-button primary"
+            :class="{ destructive: state.destructive }"
+            type="button"
+            :disabled="state.loading"
+            @click="close(true)"
+          >
+            {{ state.loading ? 'Working...' : state.confirmText }}
+          </button>
+        </footer>
+      </section>
+    </template>
+  </UModal>
 </template>
 
-<style scoped>
-.confirm-backdrop {
-  position: fixed;
-  inset: 0;
+<style>
+.confirm-modal-overlay {
   z-index: 10000;
-  display: grid;
-  place-items: center;
   background: color-mix(in srgb, #000 54%, transparent);
   backdrop-filter: blur(8px);
-  padding: 18px;
+}
+
+.confirm-modal-content {
+  z-index: 10001;
+  width: min(28rem, calc(100vw - 36px));
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
 }
 
 .confirm-dialog {
-  width: min(28rem, 100%);
+  width: 100%;
   box-shadow: 0 24px 80px color-mix(in srgb, #000 46%, transparent);
   padding: 16px;
 }

@@ -975,8 +975,22 @@
   padding: 18px;
 }
 
+.conversation-modal-overlay {
+  z-index: 100;
+  background: color-mix(in srgb, #000 54%, transparent);
+}
+
+.conversation-modal-content {
+  z-index: 101;
+  width: min(34rem, calc(100vw - 36px));
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
 .conversation-dialog {
-  width: min(34rem, 100%);
+  width: 100%;
   max-height: min(43rem, calc(100vh - 36px));
   display: flex;
   flex-direction: column;
