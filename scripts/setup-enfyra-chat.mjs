@@ -22,6 +22,7 @@ const heavyWriteTools = new Set([
 ]);
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+let directAccessToken = null;
 
 const settleAfterCall = async (name) => {
   if (heavyWriteTools.has(name) && heavyWriteDelayMs > 0) {
@@ -76,6 +77,51 @@ const call = async (name, args = {}) => {
   }
   await settleAfterCall(name);
   return { text, json };
+};
+
+const directRequest = async (path, options = {}) => {
+  if (!directAccessToken) {
+    const loginResponse = await fetch(`${apiUrl}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    if (!loginResponse.ok) {
+      throw new Error(`direct auth failed: ${loginResponse.status} ${await loginResponse.text()}`);
+    }
+    const loginJson = await loginResponse.json();
+    directAccessToken = loginJson.data?.accessToken || loginJson.accessToken;
+    if (!directAccessToken) throw new Error('direct auth failed: missing access token');
+  }
+  const response = await fetch(`${apiUrl}${path}`, {
+    ...options,
+    headers: {
+      Authorization: `Bearer ${directAccessToken}`,
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+    },
+  });
+  const text = await response.text();
+  const json = text ? JSON.parse(text) : null;
+  if (!response.ok) {
+    throw new Error(`direct ${options.method || 'GET'} ${path} failed: ${response.status} ${text}`);
+  }
+  return json;
+};
+
+const patchTableDirect = async (tableId, body) => {
+  const result = await directRequest(`/table_definition/${tableId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
+  const preview = Array.isArray(result?.data) ? result.data[0] : result?.data;
+  if (preview?._preview && preview?.requiredConfirmHash) {
+    return directRequest(`/table_definition/${tableId}?schemaConfirmHash=${preview.requiredConfirmHash}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    });
+  }
+  return result;
 };
 
 const query = async (tableName, filter = undefined, options = {}) => {
@@ -155,9 +201,37 @@ const updateTableConstraints = async (table, { indexes, uniques }) => {
   return tableByName(table.name);
 };
 
+const mergeRelationsForPatch = (existingRelations = [], desiredRelations = []) => {
+  return desiredRelations.map((relation) => {
+    const existing = existingRelations.find((item) => item.propertyName === relation.propertyName);
+    return {
+      ...(existing?.id ? { id: existing.id } : {}),
+      type: relation.type,
+      propertyName: relation.propertyName,
+      ...(relation.inversePropertyName ? { inversePropertyName: relation.inversePropertyName } : {}),
+      isNullable: relation.isNullable ?? true,
+      onDelete: relation.onDelete || 'SET NULL',
+      targetTable: typeof relation.targetTable === 'object' ? relation.targetTable.id : relation.targetTable,
+    };
+  });
+};
+
+const updateTableRelations = async (table, relations) => {
+  if (!table?.id || !relations) return table;
+  const inspected = await call('inspect_table', { tableName: table.name });
+  const meta = inspected.json?.table;
+  const mergedRelations = mergeRelationsForPatch(meta?.relations || [], relations);
+  await patchTableDirect(String(table.id), { relations: mergedRelations });
+  await sleep(heavyWriteDelayMs);
+  return tableByName(table.name);
+};
+
 const createTableIfMissing = async ({ name, description, columns, relations, indexes, uniques }) => {
   const existing = await tableByName(name);
-  if (existing) return updateTableConstraints(existing, { indexes, uniques });
+  if (existing) {
+    const relationUpdated = await updateTableRelations(existing, relations);
+    return updateTableConstraints(relationUpdated, { indexes, uniques });
+  }
   await call('create_table', {
     name,
     description,
@@ -274,6 +348,18 @@ const deleteTableColumnIfExists = async (tableName, columnName) => {
     tableId: String(meta.id),
     columnId: String(column.id),
   });
+};
+
+const deleteRelationIfExists = async (tableName, propertyName) => {
+  const table = await tableByName(tableName);
+  if (!table?.id) return;
+  const rows = await query('relation_definition', {
+    propertyName: { _eq: propertyName },
+    sourceTable: { id: { _eq: String(table.id) } },
+  }, { limit: 20 });
+  for (const row of rows) {
+    await deleteRecord('relation_definition', row.id);
+  }
 };
 
 const ensureUser = async (data) => {
@@ -495,6 +581,10 @@ const setup = async () => {
   await ensureUserColumn(userMeta.id, userMeta.columns, { name: 'displayName', type: 'varchar' });
   await ensureUserColumn(userMeta.id, userMeta.columns, { name: 'avatarUrl', type: 'varchar' });
   await ensureUserColumn(userMeta.id, userMeta.columns, { name: 'statusText', type: 'varchar' });
+  await deleteRelationIfExists('user_definition', 'createdConversations');
+  await deleteRelationIfExists('user_definition', 'chatMemberships');
+  await deleteRelationIfExists('user_definition', 'chatMessages');
+  await deleteRelationIfExists('user_definition', 'chatReadReceipts');
 
   const freshUserTable = await tableByName('user_definition');
   const conversation = await createTableIfMissing({
@@ -510,7 +600,7 @@ const setup = async () => {
       { name: 'updated_at', type: 'date', isNullable: true },
     ],
     relations: [
-      { targetTable: freshUserTable.id, type: 'many-to-one', propertyName: 'createdBy', inversePropertyName: 'createdConversations', isNullable: true, onDelete: 'SET NULL' },
+      { targetTable: freshUserTable.id, type: 'many-to-one', propertyName: 'createdBy', isNullable: true, onDelete: 'CASCADE' },
     ],
   });
 
@@ -525,7 +615,7 @@ const setup = async () => {
     ],
     relations: [
       { targetTable: conversation.id, type: 'many-to-one', propertyName: 'conversation', inversePropertyName: 'memberships', isNullable: false, onDelete: 'CASCADE' },
-      { targetTable: freshUserTable.id, type: 'many-to-one', propertyName: 'member', inversePropertyName: 'chatMemberships', isNullable: false, onDelete: 'CASCADE' },
+      { targetTable: freshUserTable.id, type: 'many-to-one', propertyName: 'member', isNullable: false, onDelete: 'CASCADE' },
     ],
   });
   await deleteTableColumnIfExists('chat_conversation_member', 'deleted_at');
@@ -539,7 +629,7 @@ const setup = async () => {
     ],
     relations: [
       { targetTable: conversation.id, type: 'many-to-one', propertyName: 'conversation', inversePropertyName: 'messages', isNullable: false, onDelete: 'CASCADE' },
-      { targetTable: freshUserTable.id, type: 'many-to-one', propertyName: 'sender', inversePropertyName: 'chatMessages', isNullable: false, onDelete: 'SET NULL' },
+      { targetTable: freshUserTable.id, type: 'many-to-one', propertyName: 'sender', isNullable: false, onDelete: 'CASCADE' },
     ],
     indexes: [
       ['conversation', 'createdAt', 'id'],
@@ -556,7 +646,7 @@ const setup = async () => {
     relations: [
       { targetTable: message.id, type: 'many-to-one', propertyName: 'message', inversePropertyName: 'readReceipts', isNullable: false, onDelete: 'CASCADE' },
       { targetTable: conversation.id, type: 'many-to-one', propertyName: 'conversation', inversePropertyName: 'readReceipts', isNullable: false, onDelete: 'CASCADE' },
-      { targetTable: freshUserTable.id, type: 'many-to-one', propertyName: 'member', inversePropertyName: 'chatReadReceipts', isNullable: false, onDelete: 'CASCADE' },
+      { targetTable: freshUserTable.id, type: 'many-to-one', propertyName: 'member', isNullable: false, onDelete: 'CASCADE' },
     ],
     indexes: [
       ['member', 'is_read', 'conversation'],

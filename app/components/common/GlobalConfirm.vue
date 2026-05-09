@@ -2,13 +2,24 @@
 import { AlertTriangle, X } from 'lucide-vue-next';
 
 const { state, close } = useGlobalConfirm();
+
+const closeFromBackdrop = (event: MouseEvent) => {
+  if (event.target === event.currentTarget) close(false);
+};
 </script>
 
 <template>
   <Teleport to="body">
     <Transition name="confirm-fade">
-      <div v-if="state.open" class="confirm-backdrop" @click.self="close(false)">
-        <section class="confirm-dialog panel" role="alertdialog" aria-modal="true" :aria-label="state.title">
+      <div
+        v-if="state.open"
+        class="confirm-backdrop"
+        @pointerdown.stop
+        @mousedown.stop
+        @mouseup.stop
+        @click.stop="closeFromBackdrop"
+      >
+        <section class="confirm-dialog panel" role="alertdialog" aria-modal="true" :aria-label="state.title" @click.stop>
           <header class="confirm-header">
             <span class="confirm-icon" :class="{ destructive: state.destructive }">
               <AlertTriangle :size="18" />
