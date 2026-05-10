@@ -116,7 +116,6 @@ export const useChat = () => {
       const conversationId = idOf(await socket.emitNewConversation({
         kind: 'group',
         memberIds,
-        title: payload.members.map((member) => member.displayName || member.email).filter(Boolean).join(', '),
       }));
       if (!conversationId) return;
       await data.openConversation(conversationId);

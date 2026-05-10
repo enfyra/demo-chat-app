@@ -1084,10 +1084,24 @@ if (kind === 'dm' && memberIds.length !== 2) @THROW400('DM requires one peer');
 if (kind === 'group' && memberIds.length < 3) @THROW400('Group requires at least three members');
 const text = (@BODY.text || '').trim();
 const createdAt = new Date().toISOString();
+const usersResult = await @REPOS.user_definition.find({
+  filter: { id: { _in: memberIds } },
+  deep: {},
+  fields: 'id,email,displayName',
+  limit: 0,
+});
+const usersById = new Map((usersResult.data || []).map((user) => [user.id, user]));
+const labelFor = (user) => user?.displayName || user?.email || 'Unknown user';
+const peerIds = memberIds.filter((memberId) => memberId !== ownerId);
+const peerLabels = peerIds.map((memberId) => labelFor(usersById.get(memberId))).filter(Boolean);
+const requestedTitle = typeof @BODY.title === 'string' ? @BODY.title.trim() : '';
+const title = kind === 'group'
+  ? (requestedTitle || peerLabels.join(', ') || 'Group chat')
+  : (peerLabels[0] || 'Direct message');
 const conversationResult = await @REPOS.chat_conversation.create({
   data: {
     kind,
-    title: @BODY.title || null,
+    title,
     description: null,
     last_message_text: text || null,
     last_message_at: text ? createdAt : null,

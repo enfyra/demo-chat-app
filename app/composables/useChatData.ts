@@ -220,31 +220,26 @@ export const useChatData = () => {
       conversationsLoading.value = true;
     }
     try {
-      const response = await api.get('/chat_conversation_member', {
+      const response = await api.get('/chat_conversation', {
         query: {
-          filter: JSON.stringify({
-            member: { id: { _eq: user.value.id } },
-          }),
-          deep: JSON.stringify({ conversation: {} }),
+          sort: '-last_message_at,-updated_at,-id',
           limit: LOAD_ALL_LIMIT,
         },
       });
 
-      const memberships = api.rowsOf<any>(response);
+      const conversations = api.rowsOf<any>(response);
       const unreadConversationIds = await fetchUnreadConversationIds();
       const items: ChatListItem[] = [];
-      for (const membership of memberships) {
-        const conversation = membership.conversation;
+      for (const conversation of conversations) {
         if (!conversation?.id) continue;
         const conversationId = idOf(conversation.id);
-        const members = [mapMember({ ...membership, member: user.value })];
-        const mappedConversation = mapConversation(conversation, members);
+        const mappedConversation = mapConversation(conversation);
         const unreadCount = unreadConversationIds.has(conversationId) ? 1 : 0;
         mappedConversation.unreadCount = unreadCount;
         items.push({
           conversation: mappedConversation,
-          membership: mapMember({ ...membership, member: user.value }),
-          members: members.map((row: ConversationMember) => row.member),
+          membership: mapMember({ member: user.value }),
+          members: [],
           unreadCount,
         });
       }
@@ -490,7 +485,7 @@ export const useChatData = () => {
   const deleteConversation = async (conversationId: string, scope: DeleteConversationScope) => {
     if (!user.value?.id || !conversationId) return;
     const item = chatItems.value.find((row) => sameId(row.conversation.id, conversationId));
-    if (!item?.membership.id) return;
+    if (!item) return;
 
     const memberships = await activeMembershipsFor(conversationId);
     const targetMemberships = scope === 'everyone' && item.conversation.kind === 'dm'

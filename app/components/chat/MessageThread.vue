@@ -167,7 +167,7 @@ watch(
         <USkeleton class="data-skeleton" />
       </div>
       <div v-else-if="hasConversation" class="thread-actions">
-        <UBadge class="member-count" color="neutral" variant="soft">
+        <UBadge v-if="conversation.members.length" class="member-count" color="neutral" variant="soft">
           {{ conversation.members.length }} members
         </UBadge>
         <UButton color="primary" variant="soft" size="xs" :disabled="!conversation.id" aria-label="Open conversation data" @click="emit('openDetails')">
