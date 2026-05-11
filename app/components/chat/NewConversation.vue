@@ -168,7 +168,6 @@ onBeforeUnmount(() => {
         :disabled="busy"
         aria-label="New conversation"
         title="New conversation"
-        @click="pickerOpen = !pickerOpen"
       >
         <MessageSquarePlus :size="18" />
       </UButton>
