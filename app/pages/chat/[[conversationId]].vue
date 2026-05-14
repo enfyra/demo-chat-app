@@ -43,11 +43,13 @@ const conversationCreatorOpen = ref(false);
 const listLoading = computed(() => conversationsLoading.value && chatItems.value.length === 0);
 const threadLoading = computed(() => messagesLoading.value || (conversationsLoading.value && activeId.value !== 'draft'));
 const realtimeConnected = computed(() => socketState.value === 'connected');
-const disconnectTitle = computed(() => {
-  if (socketState.value === 'failed') return `Realtime connection failed after ${reconnectLimit} retries.`;
-  const retryText = reconnectCountdown.value ? ` Retrying in ${reconnectCountdown.value}s.` : ' Retrying now.';
-  const attemptText = reconnectAttempt.value ? ` Attempt ${reconnectAttempt.value}/${reconnectLimit}.` : '';
-  return `Realtime connection lost.${retryText}${attemptText}`;
+const connectionLabel = computed(() => {
+  if (socketState.value === 'connected') return 'Realtime · connected';
+  if (socketState.value === 'failed') return `Realtime · failed · retry ${reconnectAttempt.value}/${reconnectLimit}`;
+  if (socketState.value === 'offline') return 'Realtime · offline';
+  const retryText = reconnectAttempt.value ? ` · retry ${reconnectAttempt.value}/${reconnectLimit}` : '';
+  const countdownText = reconnectCountdown.value ? ` · ${reconnectCountdown.value}s` : '';
+  return `Realtime · connecting${retryText}${countdownText}`;
 });
 
 const requestDeleteConversation = async (scope: DeleteConversationScope) => {
@@ -128,9 +130,9 @@ onBeforeUnmount(() => {
             @create-group="createGroupChat"
             @modal-open-change="setConversationCreatorOpen"
           />
-          <UButton class="connection-pill" color="neutral" variant="outline" tabindex="-1">
-            <span class="status-dot" />
-            Realtime · {{ socketState }}<template v-if="socketState === 'connecting' && reconnectAttempt"> · retry {{ reconnectAttempt }}/{{ reconnectLimit }}</template>
+          <UButton class="connection-pill" :class="socketState" color="neutral" variant="outline" tabindex="-1">
+            <span class="status-dot" :class="socketState" />
+            {{ connectionLabel }}
           </UButton>
           <UButton to="/how-it-works" color="neutral" variant="outline" class="docs-link">
             <ShieldCheck :size="17" />
@@ -148,7 +150,7 @@ onBeforeUnmount(() => {
       <div v-if="showReconnectBanner" class="disconnect-banner" role="status" aria-live="polite">
         <div class="disconnect-copy">
           <span class="disconnect-pulse" />
-          <p>{{ disconnectTitle }} Chat is disabled until the socket reconnects.</p>
+          <p>Realtime connection failed after {{ reconnectLimit }} retries. Chat is disabled until you reconnect.</p>
         </div>
         <button class="disconnect-retry" type="button" @click="retryRealtime">Retry now</button>
       </div>

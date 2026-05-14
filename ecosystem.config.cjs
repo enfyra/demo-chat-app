@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: 'demo-chat-app',
+      name: 'enfyra-nuxt-chat-app',
       cwd: __dirname,
       script: 'node',
       args: '.output/server/index.mjs',

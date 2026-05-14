@@ -57,6 +57,22 @@
   pointer-events: none;
 }
 
+.chat-page .connection-pill.connected {
+  border-color: var(--success);
+  background: color-mix(in srgb, var(--success) 10%, var(--background));
+}
+
+.chat-page .connection-pill.connecting {
+  border-color: var(--pending);
+  background: color-mix(in srgb, var(--pending) 12%, var(--background));
+}
+
+.chat-page .connection-pill.offline,
+.chat-page .connection-pill.failed {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, var(--background));
+}
+
 .disconnect-banner {
   grid-row: 2;
   position: relative;

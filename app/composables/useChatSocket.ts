@@ -20,7 +20,7 @@ export const useChatSocket = ({ activeId, getPresenceUserIds, upsertMessage, tou
   const reconnectLimit = 5;
   const reconnectCountdown = ref(0);
   const hasConnectionProblem = ref(false);
-  const showReconnectBanner = computed(() => hasConnectionProblem.value && socketState.value !== 'connected');
+  const showReconnectBanner = computed(() => socketState.value === 'failed');
   const typingUsers = ref<TypingUser[]>([]);
   const onlineUserIds = ref<Set<string>>(new Set());
   let socket: Socket | null = null;
@@ -188,6 +188,12 @@ export const useChatSocket = ({ activeId, getPresenceUserIds, upsertMessage, tou
     socket.on('connect_error', () => {
       scheduleReconnect();
     });
+    socket.io.on('error', () => {
+      scheduleReconnect();
+    });
+    socket.io.on('close', () => {
+      scheduleReconnect();
+    });
     socket.on('disconnect', () => {
       stopPresenceHeartbeat();
       if (disconnecting) return;
@@ -298,7 +304,12 @@ export const useChatSocket = ({ activeId, getPresenceUserIds, upsertMessage, tou
   };
 
   const reloadForRetry = () => {
-    window.location.reload();
+    clearReconnectTimer();
+    clearCountdown();
+    reconnectAttempt.value = 0;
+    hasConnectionProblem.value = true;
+    socketState.value = 'connecting';
+    socket?.connect();
   };
 
   const emitMessage = (text: string, messageId: string) => {

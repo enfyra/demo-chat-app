@@ -317,8 +317,23 @@ a {
   width: 8px;
   height: 8px;
   border-radius: 999px;
+  background: var(--muted-foreground);
+}
+
+.status-dot.connected {
   background: var(--success);
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--success) 16%, transparent);
+}
+
+.status-dot.connecting {
+  background: var(--pending);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--pending) 16%, transparent);
+}
+
+.status-dot.offline,
+.status-dot.failed {
+  background: var(--danger);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--danger) 16%, transparent);
 }
 
 .muted {

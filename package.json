@@ -1,5 +1,5 @@
 {
-  "name": "enfyra-demo-chat-app",
+  "name": "enfyra-nuxt-chat-app",
   "type": "module",
   "private": true,
   "scripts": {

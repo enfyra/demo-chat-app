@@ -1,4 +1,4 @@
-name: Deploy demo chat app to VPS
+name: Deploy Enfyra Nuxt chat app to VPS
 
 on:
   push:
@@ -30,9 +30,9 @@ jobs:
           ssh $VPS_USER@$VPS_HOST <<'ENDSSH'
             set -euo pipefail
 
-            export PROJECT_NAME="demo-chat-app"
-            export APP_DIR="/apps/demo-chat-app"
-            export REPO_URL="https://github.com/enfyra/demo-chat-app.git"
+            export PROJECT_NAME="enfyra-nuxt-chat-app"
+            export APP_DIR="/apps/enfyra-nuxt-chat-app"
+            export REPO_URL="https://github.com/enfyra/enfyra-nuxt-chat-app.git"
 
             export PATH="$PATH:/usr/bin:/usr/local/bin:$HOME/.local/bin"
 

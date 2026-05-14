@@ -484,7 +484,7 @@ const nuxtSteps: GuideStep[] = [
     icon: 'i-lucide-package-plus',
     title: 'Install Nuxt UI and Socket.IO client',
     text: 'The app is a normal Nuxt SSR app. Nuxt UI provides the interface components; socket.io-client talks to the Enfyra websocket gateway.',
-    code: `yarn dlx nuxi init enfyra-demo-chat-app
+    code: `yarn dlx nuxi init enfyra-nuxt-chat-app
 yarn add @nuxt/ui tailwindcss @nuxtjs/color-mode socket.io-client`,
   },
   {
