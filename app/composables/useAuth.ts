@@ -11,10 +11,10 @@ const mapAuthUser = (value: any): ChatUser | null => {
   return {
     id: row.id,
     email: row.email || '',
-    displayName: row.displayName || row.display_name || row.email || 'Unknown user',
-    avatarUrl: row.avatarUrl || row.avatar_url || null,
-    statusText: row.statusText || row.status_text || null,
-    lastSeenAt: row.lastSeenAt || row.last_seen_at || row.updatedAt || null,
+    displayName: row.displayName || row.email || 'Unknown user',
+    avatarUrl: row.avatarUrl || null,
+    statusText: row.statusText || null,
+    lastSeenAt: row.lastSeenAt || row.updatedAt || null,
   };
 };
 

@@ -294,10 +294,10 @@ Computed token bridge
     id: 'enfyra-schema',
     icon: 'i-lucide-database',
     title: 'Create chat tables and indexes',
-    text: 'Conversation membership is the visibility boundary. Read receipts are separate rows so unread can be queried with member + is_read indexes. Messages use a conversation + createdAt + id index for cursor pagination.',
+    text: 'Conversation membership is the visibility boundary. Read receipts are separate rows so unread can be queried with member + isRead indexes. Messages use a conversation + createdAt + id index for cursor pagination.',
     code: `chat_conversation
   kind, title, description
-  last_message_text, last_message_at
+  lastMessageText, lastMessageAt
   createdBy -> user_definition
 
 chat_conversation_member
@@ -315,8 +315,8 @@ chat_message_read
   message -> chat_message
   conversation -> chat_conversation
   member -> user_definition
-  index: member, is_read, id
-  index: conversation, member, is_read`,
+  index: member, isRead, id
+  index: conversation, member, isRead`,
   },
   {
     id: 'enfyra-rls',
@@ -460,7 +460,7 @@ for (const userId of requestedIds.slice(0, 100)) {
 await Promise.all((unreadRows.data || []).map((row) =>
   @REPOS.chat_message_read.update({
     id: row.id,
-    data: { is_read: true, read_at: readAt },
+    data: { isRead: true, readAt },
   })
 ));
 

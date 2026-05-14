@@ -26,10 +26,10 @@ let searchRun = 0;
 const mapUser = (value: any): ChatUser => ({
   id: value?.id || '',
   email: value?.email || '',
-  displayName: value?.displayName || value?.display_name || value?.email || 'Unknown user',
-  avatarUrl: value?.avatarUrl || value?.avatar_url || null,
-  statusText: value?.statusText || value?.status_text || null,
-  lastSeenAt: value?.lastSeenAt || value?.last_seen_at || null,
+  displayName: value?.displayName || value?.email || 'Unknown user',
+  avatarUrl: value?.avatarUrl || null,
+  statusText: value?.statusText || null,
+  lastSeenAt: value?.lastSeenAt || null,
 });
 
 const canCreateGroup = computed(() => selected.value.length >= 2 && !props.busy);

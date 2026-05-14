@@ -33,17 +33,17 @@ export const useChatData = () => {
   const mapUser = (value: any): ChatUser => ({
     id: idOf(value?.id),
     email: value?.email || '',
-    displayName: value?.displayName || value?.display_name || value?.email || 'Unknown user',
-    avatarUrl: value?.avatarUrl || value?.avatar_url || null,
-    statusText: value?.statusText || value?.status_text || null,
-    lastSeenAt: value?.lastSeenAt || value?.last_seen_at || value?.updatedAt || null,
+    displayName: value?.displayName || value?.email || 'Unknown user',
+    avatarUrl: value?.avatarUrl || null,
+    statusText: value?.statusText || null,
+    lastSeenAt: value?.lastSeenAt || value?.updatedAt || null,
   });
 
   const mapMember = (membership: any): ConversationMember => ({
     id: idOf(membership?.id),
     role: membership?.role === 'owner' ? 'owner' : 'member',
     member: mapUser(membership?.member || {}),
-    lastReadAt: membership?.last_read_at || null,
+    lastReadAt: membership?.lastReadAt || null,
   });
 
   const mapConversation = (conversation: any, members: ConversationMember[] = []): Conversation => ({
@@ -52,8 +52,8 @@ export const useChatData = () => {
     title: conversation?.title || 'Untitled chat',
     description: conversation?.description || null,
     members,
-    lastMessageText: conversation?.last_message_text || null,
-    lastMessageAt: conversation?.last_message_at || conversation?.updatedAt || null,
+    lastMessageText: conversation?.lastMessageText || null,
+    lastMessageAt: conversation?.lastMessageAt || conversation?.updatedAt || null,
     unreadCount: 0,
   });
 
@@ -102,7 +102,7 @@ export const useChatData = () => {
         query: {
           filter: JSON.stringify({
             member: { id: { _eq: user.value.id } },
-            is_read: { _eq: false },
+            isRead: { _eq: false },
           }),
           fields: 'conversation',
           limit: LOAD_ALL_LIMIT,
@@ -121,7 +121,7 @@ export const useChatData = () => {
   const createMembership = (conversationId: string, memberId: string, role: 'owner' | 'member') => {
     return api.post('/chat_conversation_member', {
       role,
-      joined_at: new Date().toISOString(),
+      joinedAt: new Date().toISOString(),
       conversation: { id: conversationId },
       member: { id: memberId },
     });
@@ -133,7 +133,7 @@ export const useChatData = () => {
     sender: mapUser(row.sender || {}),
     text: row.text,
     createdAt: row.createdAt,
-    status: row.persist_status === 'failed' ? 'failed' : 'persisted',
+    status: row.persistStatus === 'failed' ? 'failed' : 'persisted',
   });
 
   const setOlderCursor = (messages: ChatMessage[]) => {
@@ -222,7 +222,7 @@ export const useChatData = () => {
     try {
       const response = await api.get('/chat_conversation', {
         query: {
-          sort: '-last_message_at,-updated_at,-id',
+          sort: '-lastMessageAt,-updatedAt,-id',
           limit: LOAD_ALL_LIMIT,
         },
       });
@@ -310,10 +310,9 @@ export const useChatData = () => {
         kind: 'dm',
         title: target.displayName,
         description: null,
-        last_message_text: null,
-        last_message_at: null,
-        created_at: now,
-        updated_at: now,
+        lastMessageText: null,
+        lastMessageAt: null,
+        updatedAt: now,
         createdBy: { id: user.value.id },
       });
       const conversation = api.firstRowOf<any>(response);
@@ -345,10 +344,9 @@ export const useChatData = () => {
         kind: 'group',
         title,
         description: null,
-        last_message_text: null,
-        last_message_at: null,
-        created_at: now,
-        updated_at: now,
+        lastMessageText: null,
+        lastMessageAt: null,
+        updatedAt: now,
         createdBy: { id: user.value.id },
       });
       const conversation = api.firstRowOf<any>(response);
@@ -442,14 +440,14 @@ export const useChatData = () => {
     try {
       await api.post('/chat_message', {
         text,
-        persist_status: 'persisted',
+        persistStatus: 'persisted',
         conversation: { id: activeId.value },
         sender: { id: user.value?.id },
       });
       await api.patch(`/chat_conversation/${activeId.value}`, {
-        last_message_text: text,
-        last_message_at: optimistic.createdAt,
-        updated_at: optimistic.createdAt,
+        lastMessageText: text,
+        lastMessageAt: optimistic.createdAt,
+        updatedAt: optimistic.createdAt,
       });
       upsertMessage({ ...optimistic, status: 'persisted' });
       await refreshConversations();
