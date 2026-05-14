@@ -36,6 +36,32 @@
   font-weight: 700;
 }
 
+.chat-page .brand-copy {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+  line-height: 1.05;
+}
+
+.chat-page .brand-name,
+.chat-page .brand-subtitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-page .brand-name {
+  color: var(--foreground);
+}
+
+.chat-page .brand-subtitle {
+  color: var(--muted-foreground);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
 .chat-page .header-actions {
   justify-content: flex-end;
 }
@@ -191,6 +217,7 @@
     font-size: 16px;
   }
 
+  .chat-page .brand-subtitle,
   .brand-powered {
     display: none;
   }
@@ -252,7 +279,8 @@
 }
 
 @media (max-width: 480px) {
-  .chat-page .brand > span:not(.brand-mark):not(.brand-powered) {
+  .chat-page .brand-copy,
+  .brand-powered {
     display: none;
   }
 }

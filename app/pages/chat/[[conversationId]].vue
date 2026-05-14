@@ -114,7 +114,10 @@ onBeforeUnmount(() => {
       <div class="chat-header app-shell-container">
         <NuxtLink class="brand" to="/chat">
           <span class="brand-mark"><MessageSquareText :size="19" /></span>
-          <span>Enfyra Demo Chat</span>
+          <span class="brand-copy">
+            <span class="brand-name">Enfyra Nuxt Chat</span>
+            <span class="brand-subtitle">Third-party realtime app</span>
+          </span>
           <span class="brand-powered">Powered by Enfyra</span>
         </NuxtLink>
         <div class="header-actions">

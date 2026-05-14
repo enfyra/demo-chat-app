@@ -84,6 +84,8 @@ const forceScrollToBottom = async () => {
   await nextTick();
   scrollToBottom();
   requestAnimationFrame(() => scrollToBottom());
+  window.setTimeout(() => scrollToBottom(), 80);
+  window.setTimeout(() => scrollToBottom(), 180);
 };
 
 const requestLoadOlder = () => {
@@ -122,6 +124,7 @@ watch(
       return;
     }
     scrollToBottom();
+    requestAnimationFrame(() => scrollToBottom());
   },
   { immediate: true },
 );
