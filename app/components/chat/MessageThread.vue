@@ -82,7 +82,8 @@ const scrollToBottom = () => {
 
 const queueScrollToBottom = () => {
   if (!import.meta.client) return;
-  requestAnimationFrame(() => scrollToBottom());
+  const frame = globalThis.requestAnimationFrame || ((callback: FrameRequestCallback) => window.setTimeout(callback, 16));
+  frame(() => scrollToBottom());
 };
 
 const forceScrollToBottom = async () => {
