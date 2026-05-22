@@ -80,10 +80,16 @@ const scrollToBottom = () => {
   pendingNewMessage.value = false;
 };
 
+const queueScrollToBottom = () => {
+  if (!import.meta.client) return;
+  requestAnimationFrame(() => scrollToBottom());
+};
+
 const forceScrollToBottom = async () => {
   await nextTick();
   scrollToBottom();
-  requestAnimationFrame(() => scrollToBottom());
+  if (!import.meta.client) return;
+  queueScrollToBottom();
   window.setTimeout(() => scrollToBottom(), 80);
   window.setTimeout(() => scrollToBottom(), 180);
 };
@@ -124,7 +130,7 @@ watch(
       return;
     }
     scrollToBottom();
-    requestAnimationFrame(() => scrollToBottom());
+    queueScrollToBottom();
   },
   { immediate: true },
 );
